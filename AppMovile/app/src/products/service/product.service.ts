@@ -1,6 +1,6 @@
 import axios, { isAxiosError } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CreateProductRequest, CreateProductResponse, ProductResponse } from "../models/product.model";
+import { CreateProductRequest, CreateProductResponse, ProductItem, ProductResponse } from "../models/product.model";
 import { API_URL } from '@/api/ApiClient';
 
 // Productos base asociados a las categorías fundamentales (Electronics, Fashion, VideoGames)
@@ -222,6 +222,36 @@ export const ProductService = {
     } catch (error) {
       console.log("Error al cargar todos los productos:", error);
       return BASE_PRODUCTS;
+    }
+  },
+
+  getProductsByCategoryId: async (
+    categoryId: number,
+    token: string
+  ): Promise<ProductItem[]> => {
+    try {
+      const authTokenHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+      const response = await axios.get<ProductItem[]>(
+        `${API_URL}/products/category/${categoryId}`,
+        {
+          headers: {
+            Authorization: authTokenHeader,
+            "Content-Type": "application/json"
+          },
+          timeout: 15000
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (isAxiosError(error) && error.response) {
+        console.log("ERROR RESPONSE:", error.response.data);
+        throw new Error(error.response.data?.Message || error.response.data?.message || "Error al obtener productos");
+      }
+      if (isAxiosError(error) && error.code === "ECONNABORTED") {
+        throw new Error("Tiempo de espera agotado. Revisa tu conexión a internet.");
+      }
+      throw new Error("Error de conexión con el servidor");
     }
   }
 };
